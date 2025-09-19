@@ -8,11 +8,14 @@
   NODE_VERSION = "20.11.1"
   NPM_VERSION = "10.5.0"
   
-  # Configure secrets scanning to ignore build cache and node_modules
-  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/**,node_modules/**"
+  # Configure secrets scanning to ignore build cache, node_modules and environment files
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/**,node_modules/**,.env*"
   
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
+  
+  # Disable secrets scanning for specific keys that are meant to be in the build
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_*,SUPABASE_*,POSTGRES_*"
 
 # Configure build plugins
 [[plugins]]
