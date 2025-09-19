@@ -48,7 +48,8 @@ next-env.d.ts
 .next/cache/
 
 # Netlify
-.netlify/
+.netlify/*
+!.netlify/state.json
 
 # OS generated files
 .DS_Store

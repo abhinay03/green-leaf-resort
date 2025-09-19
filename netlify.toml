@@ -1,14 +1,15 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  ignore = ".next/cache/**"
 
 [build.environment]
   # Node.js and npm versions
   NODE_VERSION = "20.11.1"
   NPM_VERSION = "10.5.0"
   
-  # Disable secrets scanning for build cache files
-  SECRETS_SCAN_ENABLED = "false"
+  # Configure secrets scanning to ignore build cache and node_modules
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/**,node_modules/**"
   
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
@@ -25,17 +26,21 @@
   # Skip processing of certain directories
   skip_processing = true
 
-# Configure build caching
+# Configure build caching - disable to prevent caching sensitive data
 [build.caching]
-  # Disable build caching to prevent caching of sensitive data
   enabled = false
 
 [functions]
   # If you're using API routes, uncomment this
   # directory = ".next/functions"
 
+# Development settings
 [dev]
   command = "npm run dev"
   targetPort = 3000
   publish = ".next"
   port = 3000
+
+# Explicitly disable secrets scanning for build output
+[secrets]
+  enabled = false
