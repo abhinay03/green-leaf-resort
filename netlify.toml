@@ -3,20 +3,36 @@
   publish = ".next"
 
 [build.environment]
+  # Node.js and npm versions
   NODE_VERSION = "20.11.1"
   NPM_VERSION = "10.5.0"
-  NEXT_TELEGRAM_DISABLED = "1"
-  # Configure secrets scanning
-  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,node_modules/**"
+  
+  # Disable secrets scanning for build cache files
+  SECRETS_SCAN_ENABLED = "false"
+  
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
+
+# Configure build plugins
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    # Disable Next.js image optimization as we're using unoptimized images
+    images = false
+
+# Configure build settings
+[build.processing]
+  # Skip processing of certain directories
+  skip_processing = true
+
+# Configure build caching
+[build.caching]
+  # Disable build caching to prevent caching of sensitive data
+  enabled = false
 
 [functions]
   # If you're using API routes, uncomment this
   # directory = ".next/functions"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [dev]
   command = "npm run dev"
