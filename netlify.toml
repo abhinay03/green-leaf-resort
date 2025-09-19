@@ -17,9 +17,7 @@
 # Configure build plugins
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    # Disable Next.js image optimization as we're using unoptimized images
-    images = false
+  # No inputs needed for this plugin
 
 # Configure build settings
 [build.processing]
