@@ -7,12 +7,44 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 import { Search, Filter, MoreHorizontal, Eye, Edit, CheckCircle, XCircle, Clock } from "lucide-react"
 
+interface Accommodation {
+  id: string
+  name: string
+  type: string
+  price_per_night: number
+}
+
+interface Package {
+  id: string
+  name: string
+  price: number
+}
+
+interface Booking {
+  id: string
+  guest_name: string
+  guest_email: string
+  guest_phone: string
+  check_in_date: string
+  check_out_date: string
+  guests: number
+  total_amount: number
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  accommodations?: Accommodation
+  packages?: Package
+}
+
 export function BookingManagement() {
-  const [bookings, setBookings] = useState([])
-  const [filteredBookings, setFilteredBookings] = useState([])
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState<string | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -27,7 +59,7 @@ export function BookingManagement() {
   const fetchBookings = async () => {
     try {
       const response = await fetch("/api/admin/bookings")
-      const data = await response.json()
+      const data: Booking[] = await response.json()
       setBookings(data)
     } catch (error) {
       console.error("Failed to fetch bookings:", error)
@@ -36,41 +68,89 @@ export function BookingManagement() {
     }
   }
 
+  const updateBookingStatus = async (id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') => {
+    try {
+      setIsUpdating(id)
+      const response = await fetch(`/api/admin/bookings/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status })
+      })
+
+      if (!response.ok) throw new Error('Failed to update booking')
+      
+      // Update the local state
+      setBookings(bookings.map(booking => 
+        booking.id === id ? { ...booking, status } : booking
+      ))
+      
+      toast({
+        title: 'Success',
+        description: `Booking has been ${status} successfully.`,
+      })
+    } catch (error) {
+      console.error('Error updating booking:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update booking. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+      return
+    }
+    
+    try {
+      setIsUpdating(id)
+      const response = await fetch(`/api/admin/bookings/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) throw new Error('Failed to delete booking')
+      
+      // Remove from local state
+      setBookings(bookings.filter(booking => booking.id !== id))
+      
+      toast({
+        title: 'Success',
+        description: 'Booking has been deleted successfully.',
+      })
+    } catch (error) {
+      console.error('Error deleting booking:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete booking. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
   const filterBookings = () => {
     let filtered = bookings
 
     if (searchTerm) {
       filtered = filtered.filter(
-        (booking: any) =>
-          booking.guest_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.guest_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.guest_phone.includes(searchTerm),
+        (booking) =>
+          booking.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.guest_phone?.includes(searchTerm)
       )
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter((booking: any) => booking.status === statusFilter)
+      filtered = filtered.filter((booking) => booking.status === statusFilter)
     }
 
     setFilteredBookings(filtered)
-  }
-
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    try {
-      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (response.ok) {
-        fetchBookings() // Refresh the list
-      }
-    } catch (error) {
-      console.error("Failed to update booking status:", error)
-    }
   }
 
   const getStatusColor = (status: string) => {
@@ -121,25 +201,24 @@ export function BookingManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Booking Management</h1>
           <p className="text-gray-600">Manage all resort bookings and reservations</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700">New Booking</Button>
+        <Button onClick={() => router.push('/admin/bookings/new')}>
+          New Booking
+        </Button>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search by guest name, email, or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search bookings..."
+                className="pl-10 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2 bg-transparent">
@@ -156,15 +235,7 @@ export function BookingManagement() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Bookings Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -178,7 +249,7 @@ export function BookingManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBookings.map((booking: any) => (
+              {filteredBookings.map((booking) => (
                 <TableRow key={booking.id}>
                   <TableCell>
                     <div>
@@ -211,28 +282,38 @@ export function BookingManagement() {
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                      <DropdownMenuTrigger asChild disabled={!!isUpdating}>
+                        <Button variant="ghost" size="icon" disabled={!!isUpdating}>
+                          {isUpdating === booking.id ? (
+                            <div className="h-4 w-4 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin" />
+                          ) : (
+                            <MoreHorizontal className="h-4 w-4" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/admin/bookings/${booking.id}`)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/admin/bookings/${booking.id}/edit`)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Booking
                         </DropdownMenuItem>
                         {booking.status === "pending" && (
-                          <DropdownMenuItem onClick={() => updateBookingStatus(booking.id, "confirmed")}>
+                          <DropdownMenuItem 
+                            onClick={() => updateBookingStatus(booking.id, "confirmed")}
+                            disabled={!!isUpdating}
+                          >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Confirm
                           </DropdownMenuItem>
                         )}
                         {booking.status === "confirmed" && (
-                          <DropdownMenuItem onClick={() => updateBookingStatus(booking.id, "completed")}>
+                          <DropdownMenuItem 
+                            onClick={() => updateBookingStatus(booking.id, "completed")}
+                            disabled={!!isUpdating}
+                          >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Complete
                           </DropdownMenuItem>
@@ -240,9 +321,18 @@ export function BookingManagement() {
                         <DropdownMenuItem
                           onClick={() => updateBookingStatus(booking.id, "cancelled")}
                           className="text-red-600"
+                          disabled={!!isUpdating}
                         >
                           <XCircle className="mr-2 h-4 w-4" />
                           Cancel
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteBooking(booking.id)}
+                          className="text-red-600"
+                          disabled={!!isUpdating}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

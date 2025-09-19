@@ -1,51 +1,59 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-export async function GET() {
+export const dynamic = 'force-dynamic' // Ensure this is dynamic since it contains user-specific data
+
+export async function GET(request: Request) {
   try {
-    const supabase = await createClient()
+    const supabase = createClient()
+    
+    // Check if user is authenticated and has admin role
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // Get current date
     const today = new Date().toISOString().split("T")[0]
     const currentMonth = new Date().toISOString().slice(0, 7)
 
-    // Fetch various statistics
-    const [
-      { count: totalBookings },
-      { count: todayCheckIns },
-      { count: todayCheckOuts },
-      { data: revenueData },
-      { count: totalAccommodations },
-      { count: occupiedRooms },
-    ] = await Promise.all([
-      supabase.from("bookings").select("*", { count: "exact", head: true }),
-      supabase.from("bookings").select("*", { count: "exact", head: true }).eq("check_in_date", today),
-      supabase.from("bookings").select("*", { count: "exact", head: true }).eq("check_out_date", today),
-      supabase.from("bookings").select("total_amount").like("created_at", `${currentMonth}%`),
-      supabase.from("accommodations").select("*", { count: "exact", head: true }),
-      supabase
-        .from("bookings")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "confirmed")
-        .lte("check_in_date", today)
-        .gte("check_out_date", today),
-    ])
+    // Fetch various statistics using a single query with RPC for better performance
+    const { data: statsData, error } = await supabase.rpc('get_admin_stats', {
+      today_date: today,
+      current_month: currentMonth
+    })
 
-    const revenue = revenueData?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0
-    const occupancyRate = totalAccommodations ? Math.round(((occupiedRooms || 0) / totalAccommodations) * 100) : 0
-
-    const stats = {
-      totalBookings: totalBookings || 0,
-      todayCheckIns: todayCheckIns || 0,
-      todayCheckOuts: todayCheckOuts || 0,
-      occupancyRate,
-      revenue,
-      pendingBookings: 0, // You can add this query if needed
+    if (error) {
+      console.error("Database error:", error)
+      return NextResponse.json(
+        { error: "Failed to fetch statistics" },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json(stats)
+    const stats = {
+      totalBookings: statsData?.[0]?.total_bookings || 0,
+      todayCheckIns: statsData?.[0]?.today_check_ins || 0,
+      todayCheckOuts: statsData?.[0]?.today_check_outs || 0,
+      occupancyRate: statsData?.[0]?.occupancy_rate || 0,
+      revenue: statsData?.[0]?.monthly_revenue || 0,
+      pendingBookings: statsData?.[0]?.pending_bookings || 0,
+    }
+
+    // Add cache control headers
+    const response = NextResponse.json(stats)
+    response.headers.set('Cache-Control', 'no-store, max-age=0')
+    
+    return response
   } catch (error) {
     console.error("API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }

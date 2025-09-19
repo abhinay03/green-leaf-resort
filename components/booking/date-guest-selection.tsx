@@ -61,7 +61,8 @@ export function DateGuestSelection({ bookingData, setBookingData }: DateGuestSel
     const nights = calculateNights()
     const basePrice = bookingData.accommodation?.price_per_night || 0
     const packagePrice = bookingData.package?.price || 0
-    return basePrice * nights + packagePrice
+    // Calculate base price per person per night plus package price per person
+    return (basePrice * nights + packagePrice) * bookingData.guests
   }
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export function DateGuestSelection({ bookingData, setBookingData }: DateGuestSel
         totalAmount: newTotal,
       })
     }
-  }, [bookingData.checkIn, bookingData.checkOut, bookingData.accommodation, bookingData.package])
+  }, [bookingData.checkIn, bookingData.checkOut, bookingData.accommodation, bookingData.package, bookingData.guests])
 
   const nights = calculateNights()
 

@@ -36,7 +36,7 @@ export function BookingForm() {
     checkOutDate: addDays(new Date(), 1),
     guests: 1,
     accommodationId: '',
-    packageId: '',
+    packageId: 'no-package', // Special value for no package selected
     specialRequests: ''
   })
 
@@ -90,7 +90,7 @@ export function BookingForm() {
         check_out_date: format(formData.checkOutDate, 'yyyy-MM-dd'),
         guests: formData.guests,
         accommodation_id: formData.accommodationId,
-        package_id: formData.packageId,
+        package_id: formData.packageId === 'no-package' ? null : formData.packageId,
         special_requests: formData.specialRequests,
         total_amount: calculateTotal()
       }
@@ -127,22 +127,24 @@ export function BookingForm() {
   
   const calculateTotal = (): number => {
     const accommodation = accommodations.find(a => a.id === formData.accommodationId)
-    const pkg = packages.find(p => p.id === formData.packageId)
+    const pkg = formData.packageId !== 'no-package' 
+      ? packages.find(p => p.id === formData.packageId)
+      : null
     
     let total = 0
     
-    // Add accommodation cost
+    // Add accommodation cost (price per person per night)
     if (accommodation) {
       const nights = Math.ceil((formData.checkOutDate.getTime() - formData.checkInDate.getTime()) / (1000 * 60 * 60 * 24))
-      total += accommodation.price_per_night * nights
+      total += accommodation.price_per_night * nights * formData.guests
     }
     
-    // Add package cost if selected
-    if (pkg) {
-      total += pkg.price
+    // Add package cost if selected and valid (package price is per person)
+    if (pkg && formData.packageId !== 'no-package') {
+      total += pkg.price * formData.guests
     }
     
-    return total
+    return Math.round(total) // Round to nearest integer
   }
 
   return (
@@ -189,10 +191,10 @@ export function BookingForm() {
             value={formData.accommodationId} 
             onValueChange={(value) => setFormData(prev => ({ ...prev, accommodationId: value }))}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select accommodation" />
+            <SelectTrigger className="bg-white hover:bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+              <SelectValue placeholder="Select accommodation" className="text-gray-900" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border border-gray-200 rounded-md shadow-lg">
               {accommodations.map(acc => (
                 <SelectItem key={acc.id} value={acc.id}>
                   {acc.name} (₹{acc.price_per_night}/night)
@@ -205,17 +207,17 @@ export function BookingForm() {
         <div className="space-y-2">
           <Label>Package (Optional)</Label>
           <Select 
-            value={formData.packageId} 
+            value={formData.packageId}
             onValueChange={(value) => setFormData(prev => ({ ...prev, packageId: value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a package" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No package</SelectItem>
+              <SelectItem value="no-package">No package</SelectItem>
               {packages.map(pkg => (
                 <SelectItem key={pkg.id} value={pkg.id}>
-                  {pkg.name} (₹{pkg.price})
+                  {pkg.name} (₹{pkg.price.toLocaleString()} per person)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -277,21 +279,38 @@ export function BookingForm() {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="guests">Number of Guests *</Label>
+          <Label>Guests *</Label>
           <Input 
-            id="guests" 
             type="number" 
-            min="1"
-            value={formData.guests}
-            onChange={(e) => setFormData(prev => ({ ...prev, guests: parseInt(e.target.value) || 1 }))}
-            required
+            min="1" 
+            value={formData.guests} 
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              guests: Math.max(1, parseInt(e.target.value) || 1) 
+            }))} 
+            required 
           />
         </div>
         
         <div className="space-y-2">
           <Label>Total Amount</Label>
-          <div className="text-2xl font-bold text-emerald-600">
-            ₹{calculateTotal().toLocaleString()}
+          <div className="p-2 border rounded-md bg-gray-50">
+            <div className="font-medium text-lg">
+              ₹{calculateTotal().toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {formData.guests} guest{formData.guests !== 1 ? 's' : ''} × 
+              {formData.accommodationId ? (
+                <>
+                  ₹{accommodations.find(a => a.id === formData.accommodationId)?.price_per_night?.toLocaleString() || 0} per night
+                </>
+              ) : 'Select accommodation'}
+              {formData.packageId && formData.packageId !== 'no-package' && (
+                <>
+                  <br />+ {formData.guests} × ₹{packages.find(p => p.id === formData.packageId)?.price?.toLocaleString() || 0} package
+                </>
+              )}
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             {accommodations.find(a => a.id === formData.accommodationId) && (

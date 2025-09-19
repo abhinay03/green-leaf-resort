@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { supabasePublic } from "@/lib/supabase/public-client"
 import { NextResponse } from "next/server"
+
+export const dynamic = 'force-static';
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-
-    const { data: accommodations, error } = await supabase
+    const { data: accommodations, error } = await supabasePublic
       .from("accommodations")
       .select("*")
       .eq("is_available", true)
