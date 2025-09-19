@@ -43,9 +43,12 @@ next-env.d.ts
 *.ntvs*
 *.njsproj
 
-# Build caches
+# Build caches and lock files
 .cache
-.next/cache/
+.next/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
 
 # Netlify
 .netlify/*
