@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18.18.2"
+  NPM_VERSION = "9.8.1"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[functions]
+  # If you're using API routes, uncomment this
+  # directory = ".next/functions"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 3000
+  publish = ".next"
+  port = 3000
