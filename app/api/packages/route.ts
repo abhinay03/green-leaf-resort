@@ -1,11 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
+import { supabasePublic } from "@/lib/supabase/public-client"
 import { NextResponse } from "next/server"
+
+// This route is public and can be statically generated
+export const dynamic = 'force-static'
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-
-    const { data: packages, error } = await supabase
+    const { data: packages, error } = await supabasePublic
       .from("packages")
       .select("*")
       .eq("is_active", true)
@@ -18,10 +19,8 @@ export async function GET() {
 
     const response = NextResponse.json(packages)
     
-    // Prevent caching
-    response.headers.set('Cache-Control', 'no-store, max-age=0')
-    response.headers.set('Pragma', 'no-cache')
-    response.headers.set('Expires', '0')
+    // Cache for 1 hour, allow stale-while-revalidate
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=3600')
     
     return response
   } catch (error) {
