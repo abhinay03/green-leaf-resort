@@ -140,24 +140,46 @@ async function handleNavigationRequest(request) {
 
 // Handle static requests with cache-first strategy
 async function handleStaticRequest(request) {
-  const cachedResponse = await caches.match(request)
+  // Skip non-http/s requests (like chrome-extension:)
+  if (!request.url.startsWith('http')) {
+    console.log('[SW] Skipping non-http request:', request.url);
+    return fetch(request);
+  }
 
-  if (cachedResponse) {
-    return cachedResponse
+  // Skip Vercel analytics
+  if (request.url.includes('_vercel/insights')) {
+    console.log('[SW] Skipping Vercel analytics');
+    return new Response(null, { status: 200 });
   }
 
   try {
+    const cachedResponse = await caches.match(request)
+    if (cachedResponse) {
+      return cachedResponse
+    }
+
     const networkResponse = await fetch(request)
 
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE)
-      cache.put(request, networkResponse.clone())
+    // Only cache successful responses and GET requests
+    if (networkResponse.ok && request.method === 'GET') {
+      try {
+        const cache = await caches.open(DYNAMIC_CACHE)
+        await cache.put(request, networkResponse.clone())
+      } catch (cacheError) {
+        console.error('[SW] Cache put error:', cacheError)
+      }
     }
 
     return networkResponse
   } catch (error) {
-    console.log("[SW] Failed to fetch:", request.url)
-    throw error
+    console.log('[SW] Failed to fetch:', request.url, error)
+    // Return a fallback response for failed requests
+    if (request.mode === 'navigate') {
+      const cache = await caches.open(STATIC_CACHE)
+      const offlinePage = await cache.match('/offline')
+      if (offlinePage) return offlinePage
+    }
+    return new Response('Network error', { status: 408, statusText: 'Network error' })
   }
 }
 

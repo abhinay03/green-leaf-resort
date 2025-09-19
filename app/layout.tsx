@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration"
@@ -41,7 +40,6 @@ export default function RootLayout({
           <OfflineIndicator />
           {children}
         </Suspense>
-        <Analytics />
       </body>
     </html>
   )
