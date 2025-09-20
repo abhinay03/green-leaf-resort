@@ -8,8 +8,8 @@
   NODE_VERSION = "20.11.1"
   NPM_VERSION = "10.5.0"
   
-  # Configure secrets scanning to ignore build cache, node_modules, environment files, and lock files
-  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env*,*lock*.yaml,*lock*.json"
+  # Configure secrets scanning to ignore build cache, node_modules, environment files, lock files, and migration scripts
+  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env*,*lock*.yaml,*lock*.json,scripts/run-migration.js"
   
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
