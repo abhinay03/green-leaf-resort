@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { EmailInput } from "@/components/ui/email-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import type { BookingData } from "./booking-flow"
@@ -56,11 +57,10 @@ export function GuestDetails({ bookingData, setBookingData }: GuestDetailsProps)
 
             <div>
               <Label htmlFor="email">Email Address *</Label>
-              <Input
+              <EmailInput
                 id="email"
-                type="email"
                 value={bookingData.guestDetails.email}
-                onChange={(e) => updateGuestDetails("email", e.target.value)}
+                onChange={(value) => updateGuestDetails("email", value)}
                 placeholder="your.email@example.com"
                 required
               />

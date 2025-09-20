@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -103,7 +104,9 @@ export function AccommodationsSection() {
                   )}
                 </div>
 
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">Book Now</Button>
+                <Link href={`/book?type=${encodeURIComponent(accommodation.name)}`} className="w-full">
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">Book Now</Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

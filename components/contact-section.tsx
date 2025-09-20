@@ -1,10 +1,22 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Phone, Mail, MapPin, Clock } from "lucide-react"
 
+// Dynamically import the map component with SSR disabled
+const MapPreview = dynamic(() => import('./map-preview'), { ssr: false })
+
 export function ContactSection() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   const contactInfo = [
     {
       icon: Phone,
@@ -62,24 +74,12 @@ export function ContactSection() {
               ))}
             </div>
 
-            {/* Interactive Map */}
-            <Card className="border-0 shadow-lg overflow-hidden">
-              <CardContent className="p-0">
-                <div className="h-64 w-full">
-                  <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15148.105660638865!2d73.5377973!3d18.3460793!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2990071b12e87%3A0x13dee3ec9ee56f6b!2sTHE%20GREEN%20LEAF%20RESORTS!5e0!3m2!1sen!2sin!4v1757533084634!5m2!1sen!2sin"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="The Green Leaf Resorts Location"
-                    className="rounded-lg"
-                  ></iframe>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Interactive Map - Only render on client side */}
+            {isMounted && (
+              <Card className="border-0 shadow-lg overflow-hidden">
+                <MapPreview />
+              </Card>
+            )}
           </div>
 
           {/* Contact Form */}

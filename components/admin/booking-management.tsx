@@ -58,11 +58,34 @@ export function BookingManagement() {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch("/api/admin/bookings")
+      setLoading(true)
+      const response = await fetch("/api/admin/bookings", {
+        cache: 'no-store', // Ensure fresh data
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings')
+      }
+      
       const data: Booking[] = await response.json()
       setBookings(data)
+      
+      // Show success toast only if there was a previous error
+      if (bookings.length === 0) {
+        toast({
+          title: 'Bookings loaded',
+          description: `Found ${data.length} bookings`,
+          variant: 'default',
+        })
+      }
     } catch (error) {
       console.error("Failed to fetch bookings:", error)
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to load bookings. Please refresh the page to try again.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -71,6 +94,14 @@ export function BookingManagement() {
   const updateBookingStatus = async (id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') => {
     try {
       setIsUpdating(id)
+      
+      // Show loading toast
+      const loadingToast = toast({
+        title: 'Updating...',
+        description: `Setting booking status to ${status}`,
+        variant: 'default',
+      })
+      
       const response = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH',
         headers: {
@@ -79,23 +110,35 @@ export function BookingManagement() {
         body: JSON.stringify({ status })
       })
 
-      if (!response.ok) throw new Error('Failed to update booking')
+      const result = await response.json()
       
-      // Update the local state
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update booking status')
+      }
+      
+      // Update the local state with the full booking data from the server
       setBookings(bookings.map(booking => 
-        booking.id === id ? { ...booking, status } : booking
+        booking.id === id ? { ...booking, ...result } : booking
       ))
       
+      // Dismiss loading toast and show success
+      loadingToast.dismiss()
       toast({
         title: 'Success',
         description: `Booking has been ${status} successfully.`,
+        variant: 'default',
       })
     } catch (error) {
       console.error('Error updating booking:', error)
+      
+      // Dismiss any existing loading toasts
+      // No need to explicitly dismiss as the toast will auto-dismiss
+      
       toast({
         title: 'Error',
-        description: 'Failed to update booking. Please try again.',
-        variant: 'destructive'
+        description: error instanceof Error ? error.message : 'Failed to update booking. Please try again.',
+        variant: 'destructive',
+        duration: 5000,
       })
     } finally {
       setIsUpdating(null)
@@ -103,31 +146,60 @@ export function BookingManagement() {
   }
 
   const handleDeleteBooking = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
-      return
-    }
+    // Use a more modern confirmation dialog
+    const confirmed = window.confirm(
+      '⚠️ Are you sure you want to delete this booking?\n\n' +
+      'This action is permanent and cannot be undone.\n' +
+      'The booking will be removed from the system.'
+    )
+    
+    if (!confirmed) return
     
     try {
       setIsUpdating(id)
+      
+      // Show loading toast
+      const loadingToast = toast({
+        title: 'Deleting...',
+        description: 'Please wait while we delete the booking.',
+        variant: 'default',
+        duration: 5000,
+      })
+      
       const response = await fetch(`/api/admin/bookings/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      if (!response.ok) throw new Error('Failed to delete booking')
+      const result = await response.json()
       
-      // Remove from local state
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete booking')
+      }
+      
+      // Update local state
       setBookings(bookings.filter(booking => booking.id !== id))
       
+      // Dismiss loading toast and show success
+      loadingToast.dismiss()
       toast({
         title: 'Success',
         description: 'Booking has been deleted successfully.',
+        variant: 'default',
       })
     } catch (error) {
       console.error('Error deleting booking:', error)
+      
+      // Dismiss any existing loading toasts
+      // No need to explicitly dismiss as the toast will auto-dismiss
+      
       toast({
         title: 'Error',
-        description: 'Failed to delete booking. Please try again.',
-        variant: 'destructive'
+        description: error instanceof Error ? error.message : 'Failed to delete booking. Please try again.',
+        variant: 'destructive',
+        duration: 5000,
       })
     } finally {
       setIsUpdating(null)

@@ -53,15 +53,34 @@ export function BookingConfirmation({ bookingData }: BookingConfirmationProps) {
       if (response.ok) {
         const result = await response.json()
 
-        // Check if this was an offline booking
-        if (result.offline) {
-          setIsOfflineBooking(true)
-          setBookingId(`OFFLINE_${Date.now().toString().slice(-6)}`)
-        } else {
-          setBookingId(result.booking_id)
-        }
+        if (response.ok) {
+          // Check if this was an offline booking
+          if (result.offline) {
+            setIsOfflineBooking(true)
+            // For offline, generate a temporary ID with OFFLINE prefix
+            const now = new Date()
+            const month = (now.getMonth() + 1).toString().padStart(2, '0')
+            const sequence = Math.floor(Math.random() * 900) + 100 // Random 3-digit number
+            setBookingId(`OFF-${now.getFullYear()}${month}-${sequence}`)
+          } else {
+            // Handle both direct booking_id and nested in booking object
+            const bookingId = result.booking_id || (result.booking && result.booking.booking_id)
+            if (bookingId) {
+              setBookingId(bookingId)
+            } else {
+              console.warn('No booking ID found in response:', result)
+              // Fallback to a generated ID if none found
+              const now = new Date()
+              const month = (now.getMonth() + 1).toString().padStart(2, '0')
+              const sequence = Math.floor(Math.random() * 900) + 100
+              setBookingId(`GEN-${now.getFullYear()}${month}-${sequence}`)
+            }
+          }
 
-        setBookingComplete(true)
+          setBookingComplete(true)
+        } else {
+          throw new Error(result.error || 'Failed to create booking')
+        }
       } else {
         throw new Error("Booking failed")
       }
@@ -71,7 +90,12 @@ export function BookingConfirmation({ bookingData }: BookingConfirmationProps) {
       // If network fails, try to store offline
       if (!navigator.onLine) {
         try {
-          const offlineId = await offlineStorage.storeOfflineBooking({
+          const now = new Date()
+          const month = (now.getMonth() + 1).toString().padStart(2, '0')
+          const sequence = Math.floor(Math.random() * 900) + 100 // Random 3-digit number
+          const offlineId = `OFF-${now.getFullYear()}${month}-${sequence}`
+          
+          const offlineBooking = {
             accommodation_id: bookingData.accommodation.id,
             package_id: bookingData.package?.id || null,
             check_in_date: bookingData.checkIn?.toISOString().split("T")[0] || "",
@@ -82,10 +106,15 @@ export function BookingConfirmation({ bookingData }: BookingConfirmationProps) {
             guest_email: bookingData.guestDetails.email,
             guest_phone: bookingData.guestDetails.phone,
             special_requests: bookingData.guestDetails.specialRequests,
-          })
+            status: 'pending',
+            booking_id: offlineId,
+            created_at: now.toISOString(),
+          } as const
+          
+          await offlineStorage.storeOfflineBooking(offlineBooking)
 
           setIsOfflineBooking(true)
-          setBookingId(offlineId.slice(-6).toUpperCase())
+          setBookingId(offlineId)
           setBookingComplete(true)
         } catch (offlineError) {
           console.error("Offline storage failed:", offlineError)
@@ -127,10 +156,13 @@ export function BookingConfirmation({ bookingData }: BookingConfirmationProps) {
 
         <Card>
           <CardContent className="p-6">
-            <div className="text-center mb-4">
-              <div className="text-sm text-gray-500">Booking ID</div>
-              <div className={`text-2xl font-bold ${isOfflineBooking ? "text-orange-600" : "text-emerald-600"}`}>
-                {bookingId}
+            <div className="text-center mb-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <div className="text-sm font-medium text-gray-500 mb-1">Your Booking Reference</div>
+              <div className={`text-2xl font-mono font-bold tracking-wider ${isOfflineBooking ? "text-orange-600" : "text-emerald-600"}`}>
+                {bookingId || "Loading..."}
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                Please save this ID for your records
               </div>
             </div>
 

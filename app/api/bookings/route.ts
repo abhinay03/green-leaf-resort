@@ -1,15 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
+import { generateBookingId } from "@/lib/booking-utils"
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const bookingData = await request.json()
 
-    // Generate a unique booking ID
-    const bookingId = `GLR${Date.now().toString().slice(-6)}`
-
-    const { data: booking, error } = await supabase
+    // First, insert the booking without the booking_id to get the ID
+    const { data: booking, error: insertError } = await supabase
       .from("bookings")
       .insert({
         accommodation_id: bookingData.accommodation_id,
@@ -29,15 +28,39 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to create booking" }, { status: 500 })
+    if (insertError) {
+      console.error("Booking error:", insertError)
+      return NextResponse.json(
+        { error: "Failed to create booking", details: insertError.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({
-      success: true,
-      booking_id: bookingId,
-      booking: booking,
+    // Generate the booking ID with the inserted booking's ID
+    const bookingId = await generateBookingId(
+      bookingData.accommodation_id, 
+      bookingData.package_id
+    )
+
+    // Try to update with the generated booking ID
+    const { error: updateError } = await supabase
+      .from("bookings")
+      .update({ booking_id: bookingId })
+      .eq("id", booking.id)
+
+    if (updateError) {
+      console.warn("Warning: Could not set booking_id:", updateError)
+      // Continue even if we can't set the booking_id
+      return NextResponse.json({ 
+        booking: { ...booking, booking_id: null },
+        bookingId: null,
+        warning: "Booking created but could not set booking_id"
+      })
+    }
+
+    return NextResponse.json({ 
+      booking: { ...booking, booking_id: bookingId },
+      bookingId 
     })
   } catch (error) {
     console.error("API error:", error)

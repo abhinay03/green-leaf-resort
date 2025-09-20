@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { AccommodationSelection } from "./accommodation-selection"
 import { DateGuestSelection } from "./date-guest-selection"
-import { PackageSelection } from "./package-selection"
+// import { PackageSelection } from "./package-selection"
 import { GuestDetails } from "./guest-details"
 import { BookingConfirmation } from "./booking-confirmation"
 import { BookingSummary } from "./booking-summary"
@@ -47,9 +47,9 @@ export function BookingFlow() {
   const steps = [
     { number: 1, title: "Choose Accommodation", component: AccommodationSelection },
     { number: 2, title: "Select Dates & Guests", component: DateGuestSelection },
-    { number: 3, title: "Add Package (Optional)", component: PackageSelection },
-    { number: 4, title: "Guest Details", component: GuestDetails },
-    { number: 5, title: "Confirmation", component: BookingConfirmation },
+    // { number: 3, title: "Add Package (Optional)", component: PackageSelection },
+    { number: 3, title: "Guest Details", component: GuestDetails },
+    { number: 4, title: "Confirmation", component: BookingConfirmation },
   ]
 
   const CurrentStepComponent = steps[currentStep - 1].component
@@ -75,14 +75,14 @@ export function BookingFlow() {
   }
 
   const nextStep = () => {
-    if (currentStep < steps.length && canProceed()) {
-      setCurrentStep(currentStep + 1)
+    if (currentStep < steps.length) {
+      setCurrentStep((prev) => prev + 1);
     }
   }
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep((prev) => prev - 1);
     }
   }
 

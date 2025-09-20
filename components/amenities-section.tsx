@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Zap, GamepadIcon, Flame, Car, TreePine, Utensils, Waves, Mountain, Camera, Users } from "lucide-react"
 
@@ -90,12 +91,14 @@ export function AmenitiesSection() {
             that last a lifetime.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-emerald-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition-colors">
-              Book Your Stay
-            </button>
-            <button className="border-2 border-white text-white hover:bg-white hover:text-emerald-600 px-8 py-3 rounded-lg font-semibold text-lg transition-colors">
+            <Link href="/book" className="inline-block">
+              <button className="bg-white text-emerald-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition-colors w-full sm:w-auto">
+                Book Your Stay
+              </button>
+            </Link>
+            {/* <button className="border-2 border-white text-white hover:bg-white hover:text-emerald-600 px-8 py-3 rounded-lg font-semibold text-lg transition-colors">
               View Packages
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

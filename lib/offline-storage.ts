@@ -2,8 +2,9 @@
 
 export interface OfflineBooking {
   offline_id: string
+  booking_id?: string
   accommodation_id: string
-  package_id?: string
+  package_id?: string | null
   check_in_date: string
   check_out_date: string
   guests: number
@@ -12,8 +13,9 @@ export interface OfflineBooking {
   guest_email: string
   guest_phone: string
   special_requests?: string
-  created_offline: boolean
-  sync_status: "pending" | "synced" | "failed"
+  status?: string
+  created_offline?: boolean
+  sync_status?: "pending" | "synced" | "failed"
   created_at: string
 }
 
@@ -53,20 +55,27 @@ class OfflineStorage {
   }
 
   async storeOfflineBooking(
-    bookingData: Omit<OfflineBooking, "offline_id" | "created_offline" | "sync_status" | "created_at">,
+    bookingData: Omit<OfflineBooking, "offline_id" | "created_offline" | "sync_status" | "created_at"> & {
+      booking_id?: string;
+      status?: string;
+      created_at?: string;
+    },
   ): Promise<string> {
     const db = await this.openDB()
     const transaction = db.transaction(["bookings"], "readwrite")
     const store = transaction.objectStore("bookings")
 
-    const offlineId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const offlineId = `offline_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    const now = new Date().toISOString()
 
     const offlineBooking: OfflineBooking = {
       ...bookingData,
       offline_id: offlineId,
+      booking_id: bookingData.booking_id || `OFF-${now.slice(2, 4)}${now.slice(5, 7)}-${Math.floor(100 + Math.random() * 900)}`,
+      status: bookingData.status || 'pending',
       created_offline: true,
       sync_status: "pending",
-      created_at: new Date().toISOString(),
+      created_at: bookingData.created_at || now,
     }
 
     return new Promise((resolve, reject) => {

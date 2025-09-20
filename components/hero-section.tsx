@@ -10,16 +10,22 @@ const heroImages = [
     url: "/full2.jpg",
     title: "Luxury Resort Paradise",
     subtitle: "Experience nature's luxury at Panshet",
+    titleClass: "font-serif text-5xl md:text-7xl font-bold italic tracking-tight",
+    subtitleClass: "font-sans text-xl md:text-2xl font-light tracking-wider"
   },
   {
     url: "/swiss-tent.jpg",
     title: "Glamping Excellence",
     subtitle: "Adventure meets comfort",
+    titleClass: "font-mono text-5xl md:text-7xl font-bold uppercase tracking-widest",
+    subtitleClass: "font-sans text-xl md:text-2xl font-medium italic"
   },
   {
     url: "/tent-inside.jpg",
     title: "Luxury Swiss Tents",
     subtitle: "Unique stays in nature",
+    titleClass: "font-display text-5xl md:text-7xl font-extrabold",
+    subtitleClass: "font-sans text-xl md:text-2xl font-normal uppercase tracking-wider"
   },
 ]
 
@@ -78,14 +84,20 @@ export function HeroSection() {
       <div className="relative z-10 h-full flex items-center justify-center text-center text-white">
         <div className="max-w-4xl mx-auto px-4">
           <div className="animate-fade-in-up">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-balance">{heroImages[currentImage].title}</h1>
-            <p className="text-xl md:text-2xl mb-8 text-balance opacity-90">{heroImages[currentImage].subtitle}</p>
+            <h1 className={`mb-6 text-balance ${heroImages[currentImage].titleClass}`}>
+              {heroImages[currentImage].title}
+            </h1>
+            <p className={`mb-8 text-balance opacity-90 ${heroImages[currentImage].subtitleClass}`}>
+              {heroImages[currentImage].subtitle}
+            </p>
 
             <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="relative group">
-                <button 
+              <div className="relative">
+                <a 
+                  href="https://www.google.com/maps/place/THE+GREEN+LEAF+RESORTS/@18.3460793,73.5377973,15z/data=!4m6!3m5!1s0x3bc2990071b12e87:0x13dee3ec9ee56f6b!8m2!3d18.3460793!4d73.5377973!16s%2Fg%2F11q2q9q9q9?entry=ttu"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-lg hover:underline flex items-center gap-2"
-                  onClick={() => window.open('https://maps.app.goo.gl/your-google-maps-link', '_blank')}
                 >
                   <span>Panshet, Maharashtra</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -93,18 +105,26 @@ export function HeroSection() {
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <line x1="10" y1="14" x2="21" y2="3"></line>
                   </svg>
-                </button>
-                <div className="absolute hidden group-hover:block z-50 w-80 h-60 -left-40 top-full mt-2 bg-white shadow-lg rounded-lg overflow-hidden">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15148.105660638865!2d73.5377973!3d18.3460793!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2990071b12e87%3A0x13dee3ec9ee56f6b!2sTHE%20GREEN%20LEAF%20RESORTS!5e0!3m2!1sen!2sin!4v1757533084634!5m2!1sen!2sin" 
-                    width="100%" 
-                    height="100%" 
-                    style={{ border: 0 }} 
-                    allowFullScreen 
-                    loading="lazy" 
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="The Green Leaf Resorts Location"
-                  ></iframe>
+                </a>
+                <div className="absolute -left-8 top-full mt-2 bg-white p-4 rounded-lg shadow-lg hidden group-hover:block z-50">
+                  <p className="text-sm text-gray-700 mb-2">View location on Google Maps</p>
+                  <div className="w-64 h-48 bg-gray-100 rounded overflow-hidden">
+                    <img 
+                      src="/map-preview.jpg" 
+                      alt="Map preview" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://maps.googleapis.com/maps/api/staticmap?center=18.3460793,73.5377973&zoom=15&size=400x300&markers=color:red%7C18.3460793,73.5377973&key=YOUR_GOOGLE_MAPS_API_KEY';
+                      }}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => window.open('https://www.google.com/maps/place/THE+GREEN+LEAF+RESORTS/@18.3460793,73.5377973,15z/data=!4m6!3m5!1s0x3bc2990071b12e87:0x13dee3ec9ee56f6b!8m2!3d18.3460793!4d73.5377973!16s%2Fg%2F11q2q9q9q9?entry=ttu', '_blank', 'noopener,noreferrer')}
+                    className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Open in Maps
+                  </button>
                 </div>
               </div>
               <div className="flex items-center gap-1 ml-4">
@@ -117,11 +137,37 @@ export function HeroSection() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book" className="inline-block">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 text-lg w-full sm:w-auto">
-                  Book Your Stay
+                <Button 
+                  size="lg" 
+                  className="relative overflow-hidden group bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 text-lg w-full sm:w-auto
+                    transform transition-all duration-300 hover:scale-105 hover:shadow-xl
+                    before:absolute before:inset-0 before:bg-gradient-to-r before:from-emerald-500 before:to-emerald-400
+                    before:opacity-0 group-hover:before:opacity-100 before:transition-opacity before:duration-300
+                    animate-pulse hover:animate-none"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
+                      Book Your Stay
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="20" 
+                      height="20" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      className="inline-block ml-1 group-hover:translate-x-1 transition-transform duration-300"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </span>
                 </Button>
               </Link>
-              <Link href="/packages" className="inline-block">
+              {/* <Link href="/packages" className="inline-block">
                 <Button
                   size="lg"
                   variant="outline"
@@ -129,7 +175,7 @@ export function HeroSection() {
                 >
                   Explore Packages
                 </Button>
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>
