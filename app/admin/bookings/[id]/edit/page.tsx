@@ -22,6 +22,8 @@ interface Booking {
   check_in_date: string
   check_out_date: string
   guests: number
+  total_amount: number
+  original_amount?: number
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   special_requests?: string
   accommodations?: {
@@ -46,26 +48,56 @@ export default function EditBookingPage({
   const [saving, setSaving] = useState(false)
   const [booking, setBooking] = useState<Booking | null>(null)
   const [formData, setFormData] = useState<Partial<Booking>>({})
+  const [isCustomAmount, setIsCustomAmount] = useState(false)
+
+  // Calculate the number of nights between check-in and check-out
+  const calculateNights = (checkIn: string, checkOut: string) => {
+    const checkInDate = new Date(checkIn)
+    const checkOutDate = new Date(checkOut)
+    return Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  // Calculate the total amount based on guests and nights
+  const calculateTotalAmount = (guests: number, checkIn: string, checkOut: string) => {
+    if (!booking || !booking.accommodations || !booking.packages) return 0
+    const nights = calculateNights(checkIn, checkOut)
+    const basePrice = booking.accommodations.price_per_night || 0
+    const packagePrice = booking.packages.price || 0
+    return (basePrice + packagePrice) * nights * guests
+  }
+
+  // Update the amount when guests, check-in, or check-out changes
+  useEffect(() => {
+    if (booking && formData.guests && formData.check_in_date && formData.check_out_date && !isCustomAmount) {
+      const calculatedTotal = calculateTotalAmount(
+        formData.guests,
+        formData.check_in_date,
+        formData.check_out_date
+      )
+      setFormData(prev => ({
+        ...prev,
+        total_amount: calculatedTotal
+      }))
+    }
+  }, [formData.guests, formData.check_in_date, formData.check_out_date, isCustomAmount, booking])
 
   useEffect(() => {
-    const fetchBooking = async () => {
+    async function fetchBooking() {
       try {
         const supabase = createClient()
         const { data, error } = await supabase
-          .from("bookings")
+          .from('bookings')
           .select(`
             *,
             accommodations (name, type, price_per_night),
             packages (name, price)
           `)
-          .eq("id", params.id)
+          .eq('id', params.id)
           .single()
 
-        if (error || !data) {
-          throw error || new Error('Booking not found')
-        }
-
-        setBooking(data as Booking)
+        if (error) throw error
+        
+        setBooking(data)
         setFormData({
           guest_name: data.guest_name,
           guest_email: data.guest_email,
@@ -74,20 +106,26 @@ export default function EditBookingPage({
           check_out_date: data.check_out_date,
           guests: data.guests,
           status: data.status,
-          special_requests: data.special_requests || ''
+          special_requests: data.special_requests || '',
+          total_amount: data.total_amount,
+          original_amount: data.original_amount
         })
+        
+        // Check if this booking has a custom amount
+        if (data.original_amount !== null && data.original_amount !== undefined) {
+          setIsCustomAmount(true)
+        }
       } catch (error) {
         console.error('Error fetching booking:', error)
         toast({
-          title: 'Error',
-          description: 'Failed to load booking details',
           variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load booking details. Please try again.'
         })
       } finally {
         setLoading(false)
       }
     }
-
     fetchBooking()
   }, [params.id, toast])
 
@@ -109,35 +147,57 @@ export default function EditBookingPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-
+    
     try {
+      // Prepare the data to send
+      const updateData = { ...formData }
+      
+      // If this is a custom amount, include the original amount in the request
+      if (isCustomAmount && updateData.total_amount !== undefined) {
+        const calculatedAmount = calculateTotalAmount(
+          updateData.guests || 0,
+          updateData.check_in_date || '',
+          updateData.check_out_date || ''
+        )
+        
+        updateData.original_amount = calculatedAmount
+      } else {
+        // If not using a custom amount, make sure original_amount is cleared
+        delete updateData.original_amount
+      }
+      
+      // Send the update request
       const response = await fetch(`/api/admin/bookings/${params.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updateData),
       })
-
+      
       if (!response.ok) {
-        throw new Error('Failed to update booking')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update booking')
       }
-
-      const data = await response.json()
-      setBooking(data)
+      
+      const updatedBooking = await response.json()
       
       toast({
         title: 'Success',
-        description: 'Booking updated successfully',
+        description: 'Booking updated successfully!',
       })
       
+      // Update local state with the returned data
+      setBooking(updatedBooking)
+      
+      // Redirect back to the booking details page
       router.push(`/admin/bookings/${params.id}`)
     } catch (error) {
       console.error('Error updating booking:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to update booking',
         variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update booking. Please try again.'
       })
     } finally {
       setSaving(false)
@@ -259,7 +319,37 @@ export default function EditBookingPage({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="guests">Number of Guests</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="guests">Number of Guests</Label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="custom-amount"
+                      checked={isCustomAmount}
+                      onChange={(e) => {
+                        setIsCustomAmount(e.target.checked)
+                        // If disabling custom amount, recalculate the total
+                        if (!e.target.checked) {
+                          if (formData.guests && formData.check_in_date && formData.check_out_date) {
+                            const calculatedAmount = calculateTotalAmount(
+                              formData.guests,
+                              formData.check_in_date,
+                              formData.check_out_date
+                            )
+                            setFormData(prev => ({
+                              ...prev,
+                              total_amount: calculatedAmount
+                            }))
+                          }
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="custom-amount" className="text-sm font-medium text-gray-700">
+                      Set custom amount
+                    </label>
+                  </div>
+                </div>
                 <Input 
                   id="guests" 
                   name="guests" 
@@ -269,6 +359,42 @@ export default function EditBookingPage({
                   onChange={handleChange}
                   required 
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="total_amount">Total Amount</Label>
+                  {!isCustomAmount && formData.original_amount && formData.total_amount !== formData.original_amount && (
+                    <span className="text-sm text-gray-500">
+                      ₹{formData.original_amount.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">₹</span>
+                  </div>
+                  <Input
+                    id="total_amount"
+                    type="number"
+                    value={formData.total_amount || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        total_amount: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    min="0"
+                    step="0.01"
+                    className={`pl-7 ${!isCustomAmount ? 'bg-gray-100' : ''}`}
+                    disabled={!isCustomAmount}
+                  />
+                </div>
+                {isCustomAmount && formData.original_amount && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Original amount: ₹{formData.original_amount.toFixed(2)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

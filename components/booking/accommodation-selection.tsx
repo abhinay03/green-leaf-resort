@@ -37,10 +37,22 @@ export function AccommodationSelection({ bookingData, setBookingData, onNext }: 
     try {
       const response = await fetch("/api/accommodations")
       const data = await response.json()
-      setAccommodations(data)
+      
+      // Check if data is an array (successful response)
+      if (Array.isArray(data)) {
+        setAccommodations(data)
+        // Cache for offline use
+        await offlineStorage.cacheAccommodations(data)
+      } else if (data.error) {
+        // API returned an error object
+        console.error("API error:", data.error)
+        throw new Error(data.error)
+      } else {
+        // Unexpected response format
+        console.error("Unexpected response format:", data)
+        setAccommodations([])
+      }
 
-      // Cache for offline use
-      await offlineStorage.cacheAccommodations(data)
       setLoading(false)
     } catch (err) {
       console.error("Failed to fetch accommodations:", err)
@@ -48,12 +60,15 @@ export function AccommodationSelection({ bookingData, setBookingData, onNext }: 
       // Try to load from cache if offline
       try {
         const cachedData = await offlineStorage.getCachedAccommodations()
-        if (cachedData.length > 0) {
+        if (cachedData && cachedData.length > 0) {
           setAccommodations(cachedData)
           setIsOffline(true)
+        } else {
+          setAccommodations([])
         }
       } catch (cacheError) {
         console.error("Failed to load cached accommodations:", cacheError)
+        setAccommodations([])
       }
 
       setLoading(false)
@@ -127,7 +142,7 @@ export function AccommodationSelection({ bookingData, setBookingData, onNext }: 
       </div>
 
       <div className="grid gap-6">
-        {accommodations.map((accommodation: any) => (
+        {Array.isArray(accommodations) && accommodations.map((accommodation: any) => (
           <Card
             key={accommodation.id}
             className={`overflow-hidden cursor-pointer transition-all duration-200 ${

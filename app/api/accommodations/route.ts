@@ -1,7 +1,7 @@
 import { supabasePublic } from "@/lib/supabase/public-client"
 import { NextResponse } from "next/server"
 
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -13,10 +13,11 @@ export async function GET() {
 
     if (error) {
       console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to fetch accommodations" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to fetch accommodations", details: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(accommodations)
+    // Always return an array, even if empty
+    return NextResponse.json(accommodations || [])
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

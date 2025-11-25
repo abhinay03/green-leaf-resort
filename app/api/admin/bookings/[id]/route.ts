@@ -13,8 +13,9 @@ interface UpdateBookingRequest {
   check_in_date?: string
   check_out_date?: string
   guests?: number
+  total_amount?: number
+  original_amount?: number
   special_requests?: string
-  // Add other fields that can be updated here
 }
 
 export async function PATCH(
@@ -37,12 +38,50 @@ export async function PATCH(
     // Parse and validate request body
     const body: Partial<UpdateBookingRequest> = await request.json()
     
+    // Get the current booking to calculate amounts if needed
+    const { data: currentBooking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*, accommodations(price_per_night), packages(price)')
+      .eq('id', params.id)
+      .single()
+
+    if (fetchError || !currentBooking) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      )
+    }
+
+    // Calculate number of nights
+    const calculateNights = (checkIn: string, checkOut: string) => {
+      const checkInDate = new Date(checkIn)
+      const checkOutDate = new Date(checkOut)
+      return Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
+    }
+
+    // Calculate total amount based on guests and nights
+    const calculateTotalAmount = (guests: number, checkIn: string, checkOut: string) => {
+      const nights = calculateNights(checkIn, checkOut)
+      const basePrice = currentBooking.accommodations?.price_per_night || 0
+      const packagePrice = currentBooking.packages?.price || 0
+      return (basePrice + packagePrice) * nights * guests
+    }
+
     // Validate required fields if it's a form submission
     if (request.headers.get('content-type')?.includes('application/x-www-form-urlencoded')) {
-      if (!body.guest_name || !body.guest_email || !body.guest_phone || !body.check_in_date || !body.check_out_date || !body.guests) {
+      if (!body.guest_name || !body.guest_email || !body.guest_phone || !body.check_in_date || !body.check_out_date || body.guests === undefined) {
         return NextResponse.json(
           { error: 'All fields are required' },
           { status: 400 }
+        )
+      }
+
+      // If total_amount is not provided, calculate it
+      if (body.total_amount === undefined) {
+        body.total_amount = calculateTotalAmount(
+          body.guests || currentBooking.guests,
+          body.check_in_date || currentBooking.check_in_date,
+          body.check_out_date || currentBooking.check_out_date
         )
       }
     } else {
@@ -58,14 +97,14 @@ export async function PATCH(
       }
     }
 
-    // Check if booking exists
-    const { data: existingBooking, error: fetchError } = await supabase
+    // Check if booking exists (using a different variable name to avoid duplication)
+    const { data: existingBooking, error: fetchExistingError } = await supabase
       .from('bookings')
       .select('*')
       .eq('id', params.id)
       .single()
 
-    if (fetchError || !existingBooking) {
+    if (fetchExistingError || !existingBooking) {
       return NextResponse.json(
         { error: 'Booking not found' },
         { status: 404 }
@@ -86,9 +125,30 @@ export async function PATCH(
       updateData.check_out_date = new Date(body.check_out_date).toISOString()
     }
 
-    // Convert guests to number if it exists
-    if (body.guests) {
+    // Convert numbers
+    if (body.guests !== undefined) {
       updateData.guests = Number(body.guests)
+    }
+    if (body.total_amount !== undefined) {
+      updateData.total_amount = Number(body.total_amount)
+      
+      // If this is a custom amount (different from calculated), store the original amount
+      if (body.original_amount === undefined && body.guests !== undefined) {
+        const calculatedAmount = calculateTotalAmount(
+          body.guests || currentBooking.guests,
+          body.check_in_date || currentBooking.check_in_date,
+          body.check_out_date || currentBooking.check_out_date
+        )
+        
+        if (Math.abs(Number(body.total_amount) - calculatedAmount) > 0.01) {
+          updateData.original_amount = calculatedAmount
+        }
+      }
+    }
+    
+    // If original_amount is provided, ensure it's a number
+    if (body.original_amount !== undefined) {
+      updateData.original_amount = Number(body.original_amount)
     }
 
     // Update the booking

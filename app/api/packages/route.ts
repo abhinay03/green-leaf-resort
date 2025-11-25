@@ -1,8 +1,7 @@
 import { supabasePublic } from "@/lib/supabase/public-client"
 import { NextResponse } from "next/server"
 
-// This route is public and can be statically generated
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
@@ -14,15 +13,11 @@ export async function GET() {
 
     if (error) {
       console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to fetch packages" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to fetch packages", details: error.message }, { status: 500 })
     }
 
-    const response = NextResponse.json(packages)
-    
-    // Cache for 1 hour, allow stale-while-revalidate
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=3600')
-    
-    return response
+    // Always return an array, even if empty
+    return NextResponse.json(packages || [])
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
