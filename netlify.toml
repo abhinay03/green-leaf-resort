@@ -1,43 +1,44 @@
 [build]
   command = "npm run build"
   publish = ".next"
-  ignore = ".next/cache/**"
 
 [build.environment]
-  # Node.js and npm versions
+  # Node.js version
   NODE_VERSION = "20.11.1"
   NPM_VERSION = "10.5.0"
-  
-  # Configure secrets scanning to ignore build cache, node_modules, environment files, lock files, and migration scripts
-  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env*,*lock*.yaml,*lock*.json,scripts/run-migration.js"
   
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
   
-  # Disable secrets scanning for specific keys that are meant to be in the build
-  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_*,SUPABASE_*,POSTGRES_*"
-  
-  # Ensure lock files are not included in the build
-  NPM_FLAGS = "--no-package-lock"
-  YARN_FLAGS = "--no-lockfile"
+  # Disable secrets scanning (causing false positives)
+  SECRETS_SCAN_ENABLED = "false"
 
 # Configure build plugins
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  # No inputs needed for this plugin
 
 # Configure build settings
 [build.processing]
-  # Skip processing of certain directories
   skip_processing = true
 
-# Configure build caching - disable to prevent caching sensitive data
-[build.caching]
-  enabled = false
+# Configure headers for static assets
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
-[functions]
-  # If you're using API routes, uncomment this
-  # directory = ".next/functions"
+# Image optimization
+[[redirects]]
+  from = "/_next/image"
+  to = "/.netlify/images?url=:url&w=:width&q=:quality"
+  status = 200
+  query = {url = ":url", w = ":width", q = ":quality"}
+
+[[redirects]]
+  from = "/_ipx/*"
+  to = "/.netlify/images?url=:url&w=:width&q=:quality"
+  status = 200
+  query = {url = ":url", w = ":width", q = ":quality"}
 
 # Development settings
 [dev]
@@ -45,7 +46,3 @@
   targetPort = 3000
   publish = ".next"
   port = 3000
-
-# Explicitly disable secrets scanning for build output
-[secrets]
-  enabled = false

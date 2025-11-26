@@ -28,22 +28,6 @@ A modern, full-stack resort booking and management platform built with Next.js, 
 ### 1. Install Dependencies
 ```bash
 npm install
-```
-
-### 2. Environment Setup
-Create `.env.local` file:
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-POSTGRES_URL=your-postgres-connection-string
-```
-
-### 3. Database Setup
-1. Go to Supabase SQL Editor
-2. Run `scripts/ADMIN_SYSTEM_SETUP.sql`
-3. Create admin user (see Admin Setup section)
-
 ### 4. Run Development Server
 ```bash
 npm run dev
