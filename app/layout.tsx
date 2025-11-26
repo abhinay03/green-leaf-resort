@@ -5,7 +5,12 @@ import { GeistMono } from "geist/font/mono"
 import { Suspense } from "react"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration"
+import { ErrorBoundary } from "@/components/error-boundary"
 import "./globals.css"
+
+// Force all pages to be dynamic (no static generation)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -35,11 +40,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>
-          <ServiceWorkerRegistration />
-          <OfflineIndicator />
-          {children}
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div>Loading...</div>}>
+            <ServiceWorkerRegistration />
+            <OfflineIndicator />
+            {children}
+          </Suspense>
+        </ErrorBoundary>
       </body>
     </html>
   )

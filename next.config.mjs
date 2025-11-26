@@ -16,20 +16,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Force single React instance
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.alias = {
-        ...(config.resolve.alias || {}),
-        react: path.resolve(__dirname, './node_modules/react'),
-        'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
-      };
-    }
+  // Force single React instance on both client and server
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      react: path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+    };
     return config;
-  },
-  // Disable static optimization to avoid build-time rendering
-  experimental: {
-    isrMemoryCacheSize: 0,
   },
   // Security headers
   async headers() {
