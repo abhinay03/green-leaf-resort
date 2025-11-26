@@ -12,6 +12,12 @@
     "lint": "next lint",
     "supabase:test": "node scripts/test-supabase.js"
   },
+  "pnpm": {
+    "overrides": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    }
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.1.2",
